@@ -5,8 +5,15 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from .exceptions import ClientError
 from .utils import get_room_or_error
 
+from .  models import QuestionBank
+
+
+current_question_no=1
+
 
 class ChatConsumer(AsyncJsonWebsocketConsumer):
+
+
     """
     This chat consumer handles websocket connections for chat clients.
 
@@ -140,7 +147,54 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "message": message,
             }
         )
+        questionbank = QuestionBank.objects.all()
 
+        for k in questionbank:
+                global current_question_no
+                if (k.question_no==current_question_no):
+                        current_question_text=k.question_text
+                        current_question_answer=k.question_answer
+        for k in questionbank:
+                 current_question_no
+                 if (k.question_no==current_question_no+1):
+                            next_question_text=k.question_text
+                            next_question_answer=k.question_answer
+
+        await self.channel_layer.group_send(
+            room.group_name,
+            {
+                "type": "chat.message",
+                "room_id": room_id,
+                "username": "JARVIS two",
+                "message":"CURRENT QUESTION       :"+ current_question_text,
+            }
+        )
+        if message==current_question_answer:
+            current_question_no +=1
+
+
+
+
+            await self.channel_layer.group_send(
+               room.group_name,
+               {
+                   "type": "chat.message",
+                   "room_id": room_id,
+                   "username": "JARVIS two",
+                   "message": "CORRECT ANSWER BY    :" + self.scope["user"].username,
+               }
+           )
+
+
+            await self.channel_layer.group_send(
+               room.group_name,
+               {
+                   "type": "chat.message",
+                   "room_id": room_id,
+                   "username": "JARVIS two",
+                   "message": "Next Question is " +next_question_text,
+               }
+           )
     ##### Handlers for messages sent over the channel layer
 
     # These helper methods are named by the types we send - so chat.join becomes chat_join
@@ -156,8 +210,21 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "username": event["username"],
             },
         )
+        questionbank = QuestionBank.objects.all()
 
+        for k in questionbank:
+            global current_question_no
+            if (k.question_no==current_question_no):
+                    current_question_text=k.question_text
+                    current_question_answer=k.question_answer
+        await self.send_json(
+            {
+                "msg_type": settings.MSG_TYPE_MESSAGE,
+                "room": event["room_id"],
+                "username": "JARVIS",
+                "message": "Current Question is " +current_question_text,},)
     async def chat_leave(self, event):
+
         """
         Called when someone has left our chat.
         """
@@ -171,6 +238,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def chat_message(self, event):
+
+
+
         """
         Called when someone has messaged our chat.
         """
@@ -181,5 +251,6 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 "room": event["room_id"],
                 "username": event["username"],
                 "message": event["message"],
+
             },
         )
